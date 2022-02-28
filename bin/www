@@ -3,8 +3,7 @@
 /**
  * Module dependencies.
  */
- var app = require('../app');
-
-
+const server = require("../socketio")
 const port = 4000;
-app.listen(port, () => console.log("Server running in port + " + port));
+server.listen(port, () => console.log("Server running in port + " + port));
+

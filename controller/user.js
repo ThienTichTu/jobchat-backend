@@ -4,11 +4,16 @@ var FielValue = require("firebase-admin").firestore.FieldValue;
 let User = db.collection("users");
 
 const addFriend = (req, res, next) => {
-    const { myid, idref } = req.body;
-    User.doc(myid).update({
-        friend: FielValue.add(db.doc(`users/${idref}`))
+    const { idUser } = req.body
+
+    User.doc(idUser).update({
+        friendPending: FielValue.arrayUnion(req.session.user)
     })
-    res.json("add friend")
+        .then(rs => {
+            res.json("add friend")
+
+        })
+        .catch(err => console.log(err));
 }
 
 const unFriend = (req, res, next) => {
@@ -35,13 +40,41 @@ const updateInfor = (req, res, next) => {
             return res.json("update succesfuly")
         })
         .catch(err => next(err))
+}
 
+const findUser = async (req, res, next) => {
+    const { phone } = req.params
+    const snapshot = await User.where("phone", "==", phone).get()
+    if (snapshot.empty) {
+        res.json(["skip"])
+    } else {
+        const result = snapshot.docs.map(doc => {
+            if (doc.id != req.session.user) {
+                const { id, avatar, username, displayName } = doc.data()
+                return {
+                    id, avatar, username, displayName
+                }
+            } else {
+                return "skip"
+            }
+        });
+        res.json(result)
 
+    }
+}
+
+const getMessUser = async (req, res, next) => {
+
+    const snapshot = await User.doc(req.session.user).get()
+    const data = snapshot.data().Message
+    res.json(data)
 }
 
 module.exports = {
     addFriend,
     unFriend,
     uploadAvatar,
-    updateInfor
+    updateInfor,
+    findUser,
+    getMessUser
 }

@@ -23,7 +23,7 @@ const registerUser = async (req, res, next) => {
         password: passhash,
         displayName: displayName,
         friends: [],
-        friendPending: [],
+        Message: [],
         decriptions: "",
         company: "",
         address: "",
