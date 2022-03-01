@@ -4,9 +4,9 @@ const bucket = admin.storage().bucket()
 
 const uploadImg = (req, res, next) => {
     if (!req.file) {
+        console.log("ko co file")
         return next();
     }
-
     const img = req.file
     const nameFile = Date.now() + "." + img.originalname.split(".").pop()
     const file = bucket.file(nameFile)

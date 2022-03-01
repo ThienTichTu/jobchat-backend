@@ -1,5 +1,5 @@
 
-var auth = require("../firebase-config/auth")
+
 
 const authRouter = require("./auth")
 const userRouter = require("./users")

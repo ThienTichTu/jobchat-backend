@@ -1,5 +1,7 @@
 var express = require('express');
 var router = express.Router();
+var auth = require("../firebase-config/auth")
+
 const Multer = require('../firebase-config/multer')
 const uploadImg = require("../firebase-config/uploadimg")
 const {
@@ -15,10 +17,10 @@ router.get('/unFriend', unFriend);
 
 router.post('/uploadAvatar', Multer.single("avatar_update"), uploadImg, uploadAvatar);
 
-router.post("/updateUser", updateInfor)
+router.post("/updateUser", auth, updateInfor)
 
-router.get("/findUser/:phone", findUser)
+router.get("/findUser/:phone", auth, findUser)
 
-router.get("/getMessage", getMessUser)
+router.get("/getMessage", auth, getMessUser)
 
 module.exports = router;

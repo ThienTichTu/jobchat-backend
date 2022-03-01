@@ -24,8 +24,9 @@ const unFriend = (req, res, next) => {
     res.json("un friend")
 }
 
-const uploadAvatar = (req, res, next) => {
+const uploadAvatar = async (req, res, next) => {
     console.log("upload avatar...")
+
     var url = req.file ? url = req.file.filebaseUrl : url = "rong"
 
     res.json(url)
@@ -64,7 +65,7 @@ const findUser = async (req, res, next) => {
 }
 
 const getMessUser = async (req, res, next) => {
-
+    console.log(req.session.user)
     const snapshot = await User.doc(req.session.user).get()
     const data = snapshot.data().Message
     res.json(data)

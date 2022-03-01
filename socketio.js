@@ -1,6 +1,10 @@
 
 var app = require('./app');
-
+const {
+    getData_Byid,
+    addFriend_Byid,
+    findUser_Online
+} = require('./firebase-config/Query')
 const db = require('./firebase-config/connectFirebase');
 let UsersConnects = db.collection("usersConnects");
 const User = db.collection("users")
@@ -87,27 +91,97 @@ io.on('connection', (socket) => {
                 }
             })
         })
+        const idSocket = await findUser_Online(UsersConnects, data.idFind)
 
-        // UsersConnects.where("id", "==", data.idFind).get()
-        //     .then(rs => {
-        //         const idUser = rs.docs.map(doc => doc.id)
 
-        //     })
-        const userOnline = await UsersConnects.where("id", "==", data.idFind).get()
-        const idUser = userOnline.docs.map(doc => doc.data())
-        if (idUser[0]) {
-
-            const { idSocket } = idUser[0]
+        if (idSocket != "user offline") {
             const userRealtime = await User.doc(data.idFind).get()
             console.log("send data to update")
             io.to(idSocket).emit("Server-send-Rendermess", userRealtime.data().Message)
         }
-
-
-        // console.log(data)
     })
 
+    // Socket on aprove friend message
+    socket.on("aprove_friend", async (data) => {
+        try {
+            console.log(data)
+            // lay du lieu user
+            const dataUser = await getData_Byid(User, data.idUser)
+            // lay danh sach Message
+            const TempArray = dataUser.Message
+            // Thay doi mang
+            const TempArray_Update = TempArray.map(item => {
+                if (item.type == "add friend" && item.data.idAdd == data.idUserAdd) {
+                    item.state = "da xem"
+                    return item
+                } else {
+                    return item
+                }
+            })
+            // Cap nhat lai mang
+            const upDateUser = await User.doc(data.idUser).update({
+                Message: TempArray_Update
+            })
+            addFriend_Byid(User, data.idUserAdd, data.idUser)
+            //  thong bao cho user cap nhat lai Message ==> thay doi state va set coutMess
+            socket.emit("Server-send-Rendermess", TempArray_Update)
 
+            //  thong bao cho user duoc chap nhan cap nhat lai Message ==> thay doi state va set coutMess
+            const idSocket = await findUser_Online(UsersConnects, data.idUserAdd)
+
+            if (idSocket != "user offline") {
+                User.doc(data.idUserAdd).update({
+                    Message: FielValue.arrayUnion({
+                        type: "thong bao",
+                        state: "chua xem",
+                        data: `${dataUser.displayName} đã chấp nhận lời mời kết bạn (:`
+                    })
+                })
+
+                const userRealtime = await User.doc(data.idUserAdd).get()
+                console.log("send data to update chap nhan ket ban")
+
+                io.to(idSocket).emit("Server-send-Rendermess", userRealtime.data().Message)
+
+            }
+
+        } catch (err) {
+            console.log("Loi socket aprove friend >>> ", err)
+        }
+
+    })
+
+    // Socket on seen_mess thay doi trang thai da xem
+
+    socket.on("seen_mess", async (data) => {
+        console.log(data)
+        const dataUser = await getData_Byid(User, data.idUser)
+        // lay danh sach Message
+        const TempArray = dataUser.Message
+        // Thay doi mang
+        const TempArray_Update = TempArray.map(item => {
+            if (item.type == "thong bao" && item.data == data.content) {
+                item.state = "da xem"
+                return item
+            } else {
+                return item
+            }
+        })
+        // Cap nhat lai mang
+        const upDateUser = await User.doc(data.idUser).update({
+            Message: TempArray_Update
+        })
+        socket.emit("Server-send-Rendermess", TempArray_Update)
+
+    })
+
+    // Up date avatar
+    socket.on("Client_updateAvatar", async (data) => {
+        const updateUser = User.doc(data.id).update({
+            avatar: data.url
+        })
+        socket.emit("Server_updateAvatar", data.url)
+    })
 
 
 })
