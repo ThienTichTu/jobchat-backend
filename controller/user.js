@@ -70,6 +70,27 @@ const getMessUser = async (req, res, next) => {
     const data = snapshot.data().Message
     res.json(data)
 }
+const getFriend = async (req, res, next) => {
+    const snapshot = await User.doc(req.session.user).get()
+    const listUser = await User.get()
+    const friendArray = snapshot.data().friends
+    const listFriend = [];
+
+    listUser.forEach(doc => {
+
+        if (friendArray.includes(doc.id)) {
+            listFriend.push({
+                displayName: doc.data().displayName,
+                id: doc.data().id,
+                avatar: doc.data().avatar,
+            })
+        }
+    });
+    res.json(listFriend)
+
+
+
+}
 
 module.exports = {
     addFriend,
@@ -77,5 +98,6 @@ module.exports = {
     uploadAvatar,
     updateInfor,
     findUser,
-    getMessUser
+    getMessUser,
+    getFriend
 }

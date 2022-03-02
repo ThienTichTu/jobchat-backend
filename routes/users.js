@@ -6,7 +6,7 @@ const Multer = require('../firebase-config/multer')
 const uploadImg = require("../firebase-config/uploadimg")
 const {
     addFriend, unFriend, uploadAvatar, updateInfor, findUser
-    , getMessUser
+    , getMessUser, getFriend
 
 } = require('../controller/user');
 
@@ -18,6 +18,8 @@ router.get('/unFriend', unFriend);
 router.post('/uploadAvatar', Multer.single("avatar_update"), uploadImg, uploadAvatar);
 
 router.post("/updateUser", auth, updateInfor)
+
+router.get('/getFriend', getFriend)
 
 router.get("/findUser/:phone", auth, findUser)
 

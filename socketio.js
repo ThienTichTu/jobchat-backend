@@ -3,7 +3,8 @@ var app = require('./app');
 const {
     getData_Byid,
     addFriend_Byid,
-    findUser_Online
+    findUser_Online,
+    getListIdUserOnline
 } = require('./firebase-config/Query')
 const db = require('./firebase-config/connectFirebase');
 let UsersConnects = db.collection("usersConnects");
@@ -40,15 +41,17 @@ io.on('connection', (socket) => {
 
                 if (idUser[0]) {
                     UsersConnects.doc(idUser[0]).delete()
-
                 }
             })
             .catch(err => console.log(err))
+
+
+
     })
 
     // Socket connect create user ========================
-    socket.on("idClient_Connect", (data) => {
-        console.log(`Socket on idClient_Connect ===============`)
+    socket.on("idClient_Connect", async (data) => {
+        console.log(`Socket on idClient_Connect =============== ${data.id}`)
 
         UsersConnects.where("id", "==", data.id).get()
             .then(rs => {
@@ -62,11 +65,21 @@ io.on('connection', (socket) => {
                 }
             })
             .catch(err => console.log(err))
+
+        const listFriends = await getData_Byid(User, data.id)
+        const userOnline = await UsersConnects.get()
+
+        userOnline.forEach(user => {
+            if (listFriends.friends.includes(user.data().id)) {
+                io.to(user.data().idSocket).emit("Server_Mess_Useronline", data.id)
+            }
+        })
     })
+
 
     // Socket connect delete user ========================
 
-    socket.on("idClient_disconnet", (data) => {
+    socket.on("idClient_disconnet", async (data) => {
 
         console.log(`Socket on idClient_disconnect ===============`)
 
@@ -76,6 +89,19 @@ io.on('connection', (socket) => {
                 UsersConnects.doc(iduser[0]).delete()
             })
             .catch(err => console.log(err))
+
+        const userOffline = await getData_Byid(User, data)
+        const userOnline = await UsersConnects.get()
+
+        userOnline.forEach(user => {
+            if (userOffline.friends.includes(user.data().id)) {
+                io.to(user.data().idSocket).emit("Server_getClient-offline", data)
+            }
+        })
+
+        // const userOffline = await getData_Byid(UsersConnects, iduser[0])
+        // console.log(userOffline.data().id)
+        // io.sockets.emit("Server_getClient-offline", userOffline.id)
     })
     // Socket on add friend message
 
@@ -128,15 +154,15 @@ io.on('connection', (socket) => {
 
             //  thong bao cho user duoc chap nhan cap nhat lai Message ==> thay doi state va set coutMess
             const idSocket = await findUser_Online(UsersConnects, data.idUserAdd)
-
-            if (idSocket != "user offline") {
-                User.doc(data.idUserAdd).update({
-                    Message: FielValue.arrayUnion({
-                        type: "thong bao",
-                        state: "chua xem",
-                        data: `${dataUser.displayName} đã chấp nhận lời mời kết bạn (:`
-                    })
+            User.doc(data.idUserAdd).update({
+                Message: FielValue.arrayUnion({
+                    type: "thong bao",
+                    state: "chua xem",
+                    data: `${dataUser.displayName} đã chấp nhận lời mời kết bạn (:`
                 })
+            })
+            if (idSocket != "user offline") {
+
 
                 const userRealtime = await User.doc(data.idUserAdd).get()
                 console.log("send data to update chap nhan ket ban")
@@ -183,6 +209,12 @@ io.on('connection', (socket) => {
         socket.emit("Server_updateAvatar", data.url)
     })
 
+    // get friends online
+    socket.on("Client_getFriend-online", async (data) => {
+
+        const rs = await getListIdUserOnline(UsersConnects, data)
+        socket.emit("Server_getFriend-online", rs)
+    })
 
 })
 

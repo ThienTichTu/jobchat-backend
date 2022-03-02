@@ -33,8 +33,23 @@ const findUser_Online = async (colection, idUser) => {
     }
 }
 
+const getListIdUserOnline = async (colection, listUser) => {
+    const listFriend = [];
+
+    const listUserOnline = await colection.get()
+
+    listUserOnline.forEach(doc => {
+
+        if (listUser.includes(doc.data().id)) {
+            listFriend.push(doc.data().id)
+        }
+    });
+    return listFriend
+}
+
 module.exports = {
     getData_Byid,
     addFriend_Byid,
-    findUser_Online
+    findUser_Online,
+    getListIdUserOnline
 }
