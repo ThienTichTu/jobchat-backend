@@ -4,12 +4,14 @@ const {
     getData_Byid,
     addFriend_Byid,
     findUser_Online,
-    getListIdUserOnline
+    getListIdUserOnline,
+    createChatRoms,
+    getDataRoomChat
 } = require('./firebase-config/Query')
 const db = require('./firebase-config/connectFirebase');
 let UsersConnects = db.collection("usersConnects");
 const User = db.collection("users")
-
+const chatRooms = db.collection("chatRooms");
 const port = 4000;
 const http = require('http');
 
@@ -148,12 +150,14 @@ io.on('connection', (socket) => {
             const upDateUser = await User.doc(data.idUser).update({
                 Message: TempArray_Update
             })
+            // them id user vao mang friends cua 2 user
             addFriend_Byid(User, data.idUserAdd, data.idUser)
+            //  tao phong chat giua 2 user
+            createChatRoms(chatRooms, data.idUserAdd, data.idUser)
             //  thong bao cho user cap nhat lai Message ==> thay doi state va set coutMess
             socket.emit("Server-send-Rendermess", TempArray_Update)
 
             //  thong bao cho user duoc chap nhan cap nhat lai Message ==> thay doi state va set coutMess
-            const idSocket = await findUser_Online(UsersConnects, data.idUserAdd)
             User.doc(data.idUserAdd).update({
                 Message: FielValue.arrayUnion({
                     type: "thong bao",
@@ -161,12 +165,14 @@ io.on('connection', (socket) => {
                     data: `${dataUser.displayName} đã chấp nhận lời mời kết bạn (:`
                 })
             })
+
+            const idSocket = await findUser_Online(UsersConnects, data.idUserAdd)
+
             if (idSocket != "user offline") {
 
-
-                const userRealtime = await User.doc(data.idUserAdd).get()
                 console.log("send data to update chap nhan ket ban")
 
+                const userRealtime = await User.doc(data.idUserAdd).get()
                 io.to(idSocket).emit("Server-send-Rendermess", userRealtime.data().Message)
 
             }
@@ -214,6 +220,44 @@ io.on('connection', (socket) => {
 
         const rs = await getListIdUserOnline(UsersConnects, data)
         socket.emit("Server_getFriend-online", rs)
+    })
+
+    //Client send data chat P2P
+
+    socket.on("Client_sendDataChat", async (data) => {
+        var date = new Date();
+
+        const minute = date.getMinutes() < 10 ? `0${date.getMinutes()}` : date.getMinutes();
+        const time = `${date.getHours()}:${minute} ${date.getDay()}/${date.getMonth()}/${date.getFullYear()}`
+
+        const newData = {
+            type: data.type,
+            time: time,
+            idsend: data.idUserSend,
+            content: data.content
+        }
+        console.log(data)
+        const idRoom = await getDataRoomChat(chatRooms, data.idUserSend, data.idUserReceive, "id")
+        console.log(idRoom)
+        chatRooms.doc(idRoom).update({
+            data: FielValue.arrayUnion(newData)
+        })
+        const rs = await getDataRoomChat(chatRooms, data.idUserSend, data.idUserReceive, "dataChat")
+        const dataSend = {
+            dataChat: rs,
+            idUserReceive: data.idUserReceive
+        }
+        socket.emit("Server_send_DataChat-1", dataSend)
+
+        const idSocket = await findUser_Online(UsersConnects, data.idUserReceive)
+        if (idSocket != "user offline") {
+            io.to(idSocket).emit("Server_send_DataChat-2", {
+                dataChat: rs,
+                idUserSend: data.idUserSend,
+            })
+        }
+
+
     })
 
 })

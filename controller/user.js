@@ -1,8 +1,8 @@
 const db = require('../firebase-config/connectFirebase');
 var FielValue = require("firebase-admin").firestore.FieldValue;
 
-let User = db.collection("users");
-
+const User = db.collection("users");
+const ChatRoom = db.collection("chatRooms")
 const addFriend = (req, res, next) => {
     const { idUser } = req.body
 
@@ -87,7 +87,23 @@ const getFriend = async (req, res, next) => {
         }
     });
     res.json(listFriend)
+}
 
+const getChatRoom = async (req, res, next) => {
+    const { idFriend, idUser } = req.body
+    const snapshot = await ChatRoom.get()
+
+    let dataChat = [];
+    const docs = snapshot.forEach(doc => {
+        const data = doc.data();
+        if (data.state == "P2P" && data.member.includes(idFriend) && data.member.includes(idUser)) {
+
+            dataChat = [...data.data]
+        }
+    })
+
+
+    res.json(dataChat)
 
 
 }
@@ -99,5 +115,6 @@ module.exports = {
     updateInfor,
     findUser,
     getMessUser,
-    getFriend
+    getFriend,
+    getChatRoom
 }
