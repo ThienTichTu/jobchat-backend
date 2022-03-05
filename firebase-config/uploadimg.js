@@ -3,6 +3,7 @@ const BUCKET = "jobchat-35964.appspot.com"
 const bucket = admin.storage().bucket()
 
 const uploadImg = (req, res, next) => {
+    console.log("upload img chat...")
     if (!req.file) {
         console.log("ko co file")
         return next();

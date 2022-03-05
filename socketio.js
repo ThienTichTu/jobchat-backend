@@ -236,7 +236,13 @@ io.on('connection', (socket) => {
             idsend: data.idUserSend,
             content: data.content
         }
-        console.log(data)
+        if (data.type == 'img' && newData.content == undefined) {
+            newData.url = data.url
+            newData.content = ""
+        } else if (data.type == 'img') {
+            newData.url = data.url
+        }
+        console.log(newData)
         const idRoom = await getDataRoomChat(chatRooms, data.idUserSend, data.idUserReceive, "id")
         console.log(idRoom)
         chatRooms.doc(idRoom).update({

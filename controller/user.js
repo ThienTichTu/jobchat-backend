@@ -44,25 +44,51 @@ const updateInfor = (req, res, next) => {
 }
 
 const findUser = async (req, res, next) => {
-    const { phone } = req.params
-    const snapshot = await User.where("phone", "==", phone).get()
-    if (snapshot.empty) {
-        res.json(["skip"])
-    } else {
-        const result = snapshot.docs.map(doc => {
-            if (doc.id != req.session.user) {
-                const { id, avatar, username, displayName } = doc.data()
+    const { key } = req.params
+
+    const snapshot = await User.get()
+    const user = await User.doc(req.session.user).get()
+    const listFriends = user.data().friends
+    const listUser = snapshot.docs.map(doc => {
+        if ((doc.data().phone == key || doc.data().displayName.includes(key)) && doc.data().id != req.session.user) {
+            if (listFriends.includes(doc.id)) {
                 return {
-                    id, avatar, username, displayName
+                    id: doc.data().id,
+                    displayName: doc.data().displayName,
+                    avatar: doc.data().avatar,
+                    state: "friend"
                 }
             } else {
-                return "skip"
+                return {
+                    id: doc.data().id,
+                    displayName: doc.data().displayName,
+                    avatar: doc.data().avatar,
+                    state: "not-friend"
+                }
             }
-        });
-        res.json(result)
+        } else {
+            return 'skip'
+        }
+    })
+    const rs = listUser.filter(doc => doc != "skip")
+    res.json(rs)
+    // if (snapshot.empty) {
+    //     res.json(["skip"])
+    // } else {
+    //     const result = snapshot.docs.map(doc => {
+    //         if (doc.id != req.session.user) {
+    //             const { id, avatar, username, displayName } = doc.data()
+    //             return {
+    //                 id, avatar, username, displayName
+    //             }
+    //         } else {
+    //             return "skip"
+    //         }
+    //     });
+    //     res.json(result)
 
-    }
 }
+
 
 const getMessUser = async (req, res, next) => {
     console.log(req.session.user)
@@ -102,9 +128,7 @@ const getChatRoom = async (req, res, next) => {
         }
     })
 
-
     res.json(dataChat)
-
 
 }
 

@@ -2,6 +2,7 @@
 const db = require('../firebase-config/connectFirebase');
 
 let User = db.collection("users");
+
 const bcrypt = require('bcrypt');
 const saltRounds = 10;
 const getAuth = async (req, res, next) => {

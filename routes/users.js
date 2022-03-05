@@ -21,7 +21,7 @@ router.post("/updateUser", auth, updateInfor)
 
 router.get('/getFriend', getFriend)
 
-router.get("/findUser/:phone", auth, findUser)
+router.get("/findUser/:key", findUser)
 
 router.get("/getMessage", auth, getMessUser)
 
