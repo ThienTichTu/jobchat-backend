@@ -31,6 +31,7 @@ const createProject = (req, res, next) => {
         date_create: time,
         id: uuid.v4(),
         backGround: backGround[getRandomInt()],
+        column: 0
     }
     Project
         .add(newProject)
@@ -84,7 +85,81 @@ const findProject = async (req, res, next) => {
     }
 }
 
+const getProject = async (req, res, next) => {
+    const { id } = req.params
+    const snapshot = await Project.where("id", "==", id).get()
+    const listUser = await User.get()
+    const user = listUser.docs.map(doc => {
+        const { id, displayName, avatar } = doc.data()
+        return {
+            id, displayName, avatar
+        }
+    }
+    )
+    const data = snapshot.docs.map((doc) => {
+        const newManager = doc.data().memberManager.map(item => {
+            return _.find(user, ["id", item])
+        })
+        const newNomarl = doc.data().memberNomarl.map(item => {
+            return _.find(user, ["id", item])
+        })
+
+        return {
+            ...doc.data(),
+            memberNomarl: newNomarl,
+            memberManager: newManager
+        }
+    })
+    res.json(data[0])
+}
+
+const addProcess = async (req, res, next) => {
+    const { id, name } = req.body
+    const idcolumn = uuid.v4()
+    const data = await Project.where("id", "==", id).get()
+    const idProject = data.docs.map(doc => {
+        return {
+            id: doc.id,
+            stt: doc.data().column
+        }
+    })
+    const newProcess = {
+        [idcolumn]: {
+            name: name,
+            item: [],
+            stt: idProject[0].stt
+        }
+    }
+    const update = await Project.doc(idProject[0].id).update(newProcess, { merge: true })
+    const update2 = await Project.doc(idProject[0].id).update({
+        column: FielValue.increment(1)
+    })
+    res.json(newProcess)
+}
+
+const deleteProcess = async (req, res, next) => {
+    const { id, idproject } = req.body
+    const snapshot = await Project.where("id", "==", idproject).get()
+
+    const idProject = snapshot.docs.map(doc => {
+        return {
+            id: doc.id,
+            dataDelete: {
+                [id]: doc.data()[id]
+            }
+        }
+    })
+
+    const update = await Project.doc(idProject[0].id).update({
+        [id]: FielValue.delete()
+    })
+    res.json(idProject[0].dataDelete)
+}
+
 module.exports = {
     createProject,
-    findProject
+    findProject,
+    getProject,
+    addProcess,
+    deleteProcess
 }
