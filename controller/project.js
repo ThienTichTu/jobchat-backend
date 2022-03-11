@@ -3,6 +3,8 @@ var FielValue = require("firebase-admin").firestore.FieldValue;
 var uuid = require('uuid');
 const _ = require("lodash")
 const Project = db.collection("projects")
+const Cards = db.collection("cards")
+const Columns = db.collection("columns")
 const User = db.collection("users")
 const backGround = [
     "https://storage.googleapis.com/jobchat-35964.appspot.com/1646710434922.jpg",
@@ -29,13 +31,16 @@ const createProject = (req, res, next) => {
         memberManager: memberManager,
         memberNomarl: memberNomarl,
         date_create: time,
-        id: uuid.v4(),
         backGround: backGround[getRandomInt()],
-        column: 0
+        columns: 0,
+        cards: 0,
     }
     Project
         .add(newProject)
         .then(rs => {
+            Project.doc(rs.id).update({
+                id: rs.id,
+            })
             res.json("create success")
         })
         .catch(err => console.log(err))
@@ -87,8 +92,10 @@ const findProject = async (req, res, next) => {
 
 const getProject = async (req, res, next) => {
     const { id } = req.params
-    const snapshot = await Project.where("id", "==", id).get()
+    const snapshot = await Project.doc(id).get()
     const listUser = await User.get()
+    const Columndata = await Columns.where("idProject", "==", id).get()
+
     const user = listUser.docs.map(doc => {
         const { id, displayName, avatar } = doc.data()
         return {
@@ -96,64 +103,102 @@ const getProject = async (req, res, next) => {
         }
     }
     )
-    const data = snapshot.docs.map((doc) => {
-        const newManager = doc.data().memberManager.map(item => {
-            return _.find(user, ["id", item])
-        })
-        const newNomarl = doc.data().memberNomarl.map(item => {
-            return _.find(user, ["id", item])
-        })
-
-        return {
-            ...doc.data(),
-            memberNomarl: newNomarl,
-            memberManager: newManager
-        }
+    const newManager = snapshot.data().memberManager.map(item => {
+        return _.find(user, ["id", item])
     })
-    res.json(data[0])
+    const newNomarl = snapshot.data().memberNomarl.map(item => {
+        return _.find(user, ["id", item])
+    })
+
+    const rs = {
+        ...snapshot.data(),
+        memberNomarl: newNomarl,
+        memberManager: newManager
+    }
+    const cards = await Cards.get()
+    const listCards = cards.docs.map(doc => doc.data())
+
+    const newlistCard = listCards.map(item => {
+        const newMaker = item.maker.map(m => {
+            return _.find(user, ["id", m])
+        })
+        return {
+            ...item,
+            maker: newMaker
+        }
+
+    })
+
+    const obj = {}
+    const listProcess = Columndata.forEach(doc => {
+        return obj[doc.id] = doc.data()
+    })
+    var sortable = [];
+
+    for (var vehicle in obj) {
+        const cardItem = newlistCard.filter(item => item.idProcess === vehicle)
+        obj[vehicle].item = cardItem
+        sortable.push([vehicle, obj[vehicle]]);
+    }
+
+    sortable.sort(function (a, b) {
+        return a[1].stt - b[1].stt;
+    });
+    const obj1 = Object.fromEntries(sortable);
+
+    res.json({
+        infor: rs,
+        columns: obj1
+    })
+
 }
 
 const addProcess = async (req, res, next) => {
     const { id, name } = req.body
-    const idcolumn = uuid.v4()
-    const data = await Project.where("id", "==", id).get()
-    const idProject = data.docs.map(doc => {
-        return {
-            id: doc.id,
-            stt: doc.data().column
-        }
+    const snapshot = await Project.doc(id).get()
+    const add = await Columns.add({
+        idProject: id,
+        name: name,
+        item: [],
+        stt: snapshot.data().columns
     })
-    const newProcess = {
-        [idcolumn]: {
-            name: name,
-            item: [],
-            stt: idProject[0].stt
-        }
-    }
-    const update = await Project.doc(idProject[0].id).update(newProcess, { merge: true })
-    const update2 = await Project.doc(idProject[0].id).update({
-        column: FielValue.increment(1)
+    Project.doc(id).update({
+        columns: FielValue.increment(1)
     })
-    res.json(newProcess)
+    const dataAdd = await Columns.doc(add.id).get()
+    res.json({
+        [add.id]: dataAdd.data()
+    })
 }
 
 const deleteProcess = async (req, res, next) => {
-    const { id, idproject } = req.body
-    const snapshot = await Project.where("id", "==", idproject).get()
+    const { id } = req.body
 
-    const idProject = snapshot.docs.map(doc => {
-        return {
-            id: doc.id,
-            dataDelete: {
-                [id]: doc.data()[id]
-            }
-        }
+    Columns.doc(id).delete()
+
+    res.json("delete success")
+
+}
+
+const createCard = async (req, res, next) => {
+    const data = req.body
+    const newMaker = data.maker.map(user => user.id)
+    data.maker = newMaker
+    const card = await Cards.add(data)
+    const updatecard = Cards.doc(card.id).update({
+        id: card.id
     })
 
-    const update = await Project.doc(idProject[0].id).update({
-        [id]: FielValue.delete()
+    res.json(card.id)
+
+}
+
+const updateCardlocation = async (req, res, next) => {
+    const { source, des, item } = req.body
+    const updateCard = await Cards.doc(item.id).update({
+        idProcess: des
     })
-    res.json(idProject[0].dataDelete)
+    res.json("ok")
 }
 
 module.exports = {
@@ -161,5 +206,7 @@ module.exports = {
     findProject,
     getProject,
     addProcess,
-    deleteProcess
+    deleteProcess,
+    createCard,
+    updateCardlocation
 }
