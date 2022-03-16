@@ -4,7 +4,8 @@ var router = express.Router();
 // const uploadImg = require("../firebase-config/uploadimg")
 const { createProject, findProject,
     getProject, addProcess, deleteProcess, createCard,
-    updateCardlocation
+    updateCardlocation, updateCard_data, deleteCard,
+    getDataChat_Card
 } = require("../controller/project")
 
 
@@ -16,6 +17,10 @@ router.post('/addprocess', addProcess);
 router.post('/deleteprocess', deleteProcess);
 router.post('/createcard', createCard);
 router.post('/updatecardlocation', updateCardlocation);
+router.post('/updatecard-data', updateCard_data);
+router.post('/deletecard-data', deleteCard);
+
+router.post('/chat', getDataChat_Card);
 
 
 module.exports = router;

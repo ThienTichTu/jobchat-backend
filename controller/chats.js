@@ -12,6 +12,16 @@ const uploadImg_Chat = (req, res, next) => {
     res.json(url)
 }
 
+const uploadImg_Chatcard = (req, res, next) => {
+    console.log("upload img chat...")
+
+    var url = req.file ? url = req.file.filebaseUrl : url = "rong"
+
+    res.json(url)
+}
+
+
 module.exports = {
-    uploadImg_Chat
+    uploadImg_Chat,
+    uploadImg_Chatcard
 }

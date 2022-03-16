@@ -1,16 +1,16 @@
 const db = require('../firebase-config/connectFirebase');
 var FielValue = require("firebase-admin").firestore.FieldValue;
 var uuid = require('uuid');
-const _ = require("lodash")
+const _ = require("lodash");
 const Project = db.collection("projects")
 const Cards = db.collection("cards")
 const Columns = db.collection("columns")
 const User = db.collection("users")
+const chatRooms = db.collection("chatRooms")
 const backGround = [
     "https://storage.googleapis.com/jobchat-35964.appspot.com/1646710434922.jpg",
     "https://storage.googleapis.com/jobchat-35964.appspot.com/1646710485299.jpg",
-    "https://storage.googleapis.com/jobchat-35964.appspot.com/1646710501787.jpg",
-    "https://storage.googleapis.com/jobchat-35964.appspot.com/1646710518364.jpg"
+
 ]
 
 function getRandomInt() {
@@ -117,18 +117,27 @@ const getProject = async (req, res, next) => {
     }
     const cards = await Cards.get()
     const listCards = cards.docs.map(doc => doc.data())
+    const inforProcess = Columndata.docs.map(doc => {
+        return {
+            id: doc.id,
+            name: doc.data().name
+        }
+    })
 
+    // console.log(inforProcess)
     const newlistCard = listCards.map(item => {
         const newMaker = item.maker.map(m => {
             return _.find(user, ["id", m])
         })
+        const newProcess = inforProcess.filter(doc => doc.id == item.idProcess)
         return {
             ...item,
-            maker: newMaker
+            maker: newMaker,
+            // idProcess: newProcess[0]
+            Process: newProcess[0]
         }
 
     })
-
     const obj = {}
     const listProcess = Columndata.forEach(doc => {
         return obj[doc.id] = doc.data()
@@ -184,12 +193,21 @@ const createCard = async (req, res, next) => {
     const data = req.body
     const newMaker = data.maker.map(user => user.id)
     data.maker = newMaker
+    const roomChat = await chatRooms.add({
+        data: [],
+        member: data.maker,
+        state: "job"
+    })
+    data.chatRoom = roomChat.id
     const card = await Cards.add(data)
     const updatecard = Cards.doc(card.id).update({
         id: card.id
     })
-
-    res.json(card.id)
+    console.log(data)
+    res.json({
+        id: card.id,
+        chat: roomChat.id
+    })
 
 }
 
@@ -201,6 +219,27 @@ const updateCardlocation = async (req, res, next) => {
     res.json("ok")
 }
 
+const updateCard_data = async (req, res, next) => {
+    const { card } = req.body
+    Cards.doc(card.id).set(card)
+    res.json("ok")
+}
+
+const deleteCard = async (req, res, next) => {
+    const { id, idRoom } = req.body
+
+    const delet = await Cards.doc(id).delete()
+    const chatDelete = await chatRooms.doc(idRoom).delete()
+    res.json("ok")
+}
+
+const getDataChat_Card = async (req, res, next) => {
+    const { id } = req.body
+    const snapshot = await chatRooms.doc(id).get()
+
+    res.json(snapshot.data())
+}
+
 module.exports = {
     createProject,
     findProject,
@@ -208,5 +247,8 @@ module.exports = {
     addProcess,
     deleteProcess,
     createCard,
-    updateCardlocation
+    updateCardlocation,
+    updateCard_data,
+    deleteCard,
+    getDataChat_Card
 }

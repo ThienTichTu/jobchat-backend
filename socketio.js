@@ -244,7 +244,7 @@ io.on('connection', (socket) => {
         }
         console.log(newData)
         const idRoom = await getDataRoomChat(chatRooms, data.idUserSend, data.idUserReceive, "id")
-        console.log(idRoom)
+
         chatRooms.doc(idRoom).update({
             data: FielValue.arrayUnion(newData)
         })
@@ -266,9 +266,73 @@ io.on('connection', (socket) => {
 
     })
 
+    // mess create card
+
+    socket.on("Client_createCard", async (data) => {
+        await Promise.all(data.user.forEach(async (item) => {
+            const idSocket = await findUser_Online(UsersConnects, item.id)
+            const message = await User.doc(item.id).update({
+                Message: FielValue.arrayUnion({
+                    type: "thong bao",
+                    state: "chua xem",
+                    data: `${data.content.manager} vừa giao cho bạn công việc mới tại dự án ${data.content.project} có tên : ${data.content.nameCard} `
+                })
+            })
+
+            if (idSocket != "user offline") {
+                const userRealtime = await User.doc(item.id).get()
+                console.log("send data to update")
+                io.to(idSocket).emit("Server-send-Rendermess", userRealtime.data().Message)
+            }
+
+            console.log(data)
+        }));
+    })
+
+    socket.on("client_send_cardchat", async (data) => {
+        var date = new Date();
+
+        const minute = date.getMinutes() < 10 ? `0${date.getMinutes()}` : date.getMinutes();
+        const time = `${date.getHours()}:${minute} ${date.getDay()}/${date.getMonth()}/${date.getFullYear()}`
+
+        const newData = {
+            type: data.type,
+            time: time,
+            idsend: data.idUserSend,
+            content: data.content
+        }
+        if (data.img) {
+            newData.img = data.img
+        }
+        chatRooms.doc(data.idRoom).update({
+            data: FielValue.arrayUnion(newData)
+        })
+        newData.id = data.idUserSend
+        socket.emit("server_send-cardchat", newData)
+        io.sockets.emit("server_send-cardchat2", {
+            newData: newData,
+            room: data.idRoom
+        })
+        const idSocket = await findUser_Online(UsersConnects, data.manager[0].id)
+        if (idSocket != "user offline") {
+            console.log("send")
+        } else {
+            const message = await User.doc(data.manager[0].id).update({
+                Message: FielValue.arrayUnion({
+                    type: "thong bao",
+                    state: "chua xem",
+                    data: `Bạn vừa có tin nhắn mới tại ${data.nameCard}`
+                })
+            })
+            const userRealtime = await User.doc(data.manager[0].id).get()
+            console.log("send data to update")
+            io.to(idSocket).emit("Server-send-Rendermess", userRealtime.data().Message)
+        }
+
+
+    })
+
 })
-
-
 
 
 module.exports = server
